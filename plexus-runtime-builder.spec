@@ -43,7 +43,7 @@
 
 Name:           plexus-runtime-builder
 Version:        1.0
-Release:        %mkrel 0.a9.3.0.0
+Release:        %mkrel 0.a9.3.0.1
 Epoch:          0
 Summary:        Plexus Component Descriptor Creator
 License:        Apache Software License
@@ -74,6 +74,7 @@ BuildRequires:  maven2-plugin-jar
 BuildRequires:  maven2-plugin-javadoc
 BuildRequires:  maven2-plugin-resources
 BuildRequires:  maven2-plugin-surefire
+BuildRequires:  maven2-plugin-release
 %endif
 BuildRequires:  maven2-common-poms >= 1.0
 BuildRequires:  maven-wagon
