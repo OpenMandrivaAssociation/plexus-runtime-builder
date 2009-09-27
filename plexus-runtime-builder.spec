@@ -124,7 +124,7 @@ Javadoc for %{name}.
 cp %{SOURCE1} build.xml
 cp %{SOURCE3} settings.xml
 
-%patch -b .sav
+%patch0 -b .sav
 
 %build
 %if %{with_maven}
