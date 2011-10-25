@@ -1,4 +1,4 @@
-# Copyright (c) 2000-2007, JPackage Project
+# Copyright (c) 2000-2005, JPackage Project
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,81 +27,63 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-%define _with_gcj_support 1
-%define gcj_support %{?_with_gcj_support:1}%{!?_with_gcj_support:%{?_without_gcj_support:0}%{!?_without_gcj_support:%{?_gcj_support:%{_gcj_support}}%{!?_gcj_support:0}}}
 
-# If you don't want to build with maven, and use straight ant instead,
-# give rpmbuild option '--without maven'
+%global parent plexus
+%global subname runtime-builder
 
-%define with_maven %{!?_without_maven:1}%{?_without_maven:0}
-%define without_maven %{?_without_maven:1}%{!?_without_maven:0}
-
-%define section     free
-
-%define parent plexus
-%define subname runtime-builder
-
-Name:           plexus-runtime-builder
+Name:           %{parent}-%{subname}
 Version:        1.0
-Release:        %mkrel 0.a9.3.0.2
-Epoch:          0
+Release:        0.6.a9
 Summary:        Plexus Component Descriptor Creator
-License:        Apache Software License
+License:        MIT
 Group:          Development/Java
 URL:            http://plexus.codehaus.org/
+# svn export svn://svn.plexus.codehaus.org/plexus/tags/plexus-runtime-builder-1.0-alpha-9 plexus-runtime-builder/
+# tar czf plexus-runtime-builder-1.0-alpha-9.tar.gz plexus-runtime-builder/
 Source0:        %{name}-src.tar.gz
-# svn export svn://svn.plexus.codehaus.org/plexus/tags/plexus-runtime-builder-1.0-alpha-9 plexus-runtime-builder
-Source1:        plexus-runtime-builder-1.0-build.xml
-#Source2:        plexus-runtime-builder-1.0-project.xml
-Source3:        plexus-runtime-builder-settings.xml
-Source4:        plexus-runtime-builder-1.0-jpp-depmap.xml
+Patch0:         0001-Fix-ArtifactResolutionException.patch
 
-Patch0:         %{name}-maven204.patch
-
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-buildroot
-
-%if ! %{gcj_support}
 BuildArch:      noarch
-%endif
-BuildRequires:  java-rpmbuild
+
 BuildRequires:  jpackage-utils >= 0:1.7.2
-BuildRequires:  ant >= 0:1.6
+BuildRequires:  apache-commons-codec
+BuildRequires:  jakarta-commons-httpclient
 BuildRequires:  maven2 >= 2.0.4
-%if %{with_maven}
-BuildRequires:  maven2-plugin-compiler
-BuildRequires:  maven2-plugin-install
-BuildRequires:  maven2-plugin-jar
-BuildRequires:  maven2-plugin-javadoc
-BuildRequires:  maven2-plugin-resources
-BuildRequires:  maven2-plugin-surefire
-BuildRequires:  maven2-plugin-release
-%endif
-BuildRequires:  maven2-common-poms >= 1.0
+BuildRequires:  maven-compiler-plugin
+BuildRequires:  maven-install-plugin
+BuildRequires:  maven-jar-plugin
+BuildRequires:  maven-javadoc-plugin
+BuildRequires:  maven-release-plugin
+BuildRequires:  maven-resources-plugin
+BuildRequires:  maven-surefire-plugin
+BuildRequires:  maven2-common-poms
 BuildRequires:  maven-wagon
-BuildRequires:  classworlds
-BuildRequires:  jakarta-commons-collections
 BuildRequires:  plexus-appserver
 BuildRequires:  plexus-archiver
 BuildRequires:  plexus-container-default
 BuildRequires:  plexus-utils
 BuildRequires:  plexus-velocity
+BuildRequires:  plexus-xmlrpc
+BuildRequires:  tomcat6-servlet-2.5-api
 BuildRequires:  velocity
-%if %{gcj_support}
-BuildRequires:    java-gcj-compat-devel
-%endif
-ExcludeArch:	%arm %mips
+BuildRequires:  xmlrpc
 
-Requires:         maven2-common-poms >= 1.0
-Requires:         maven-wagon
-Requires:         plexus-appserver
-Requires:         plexus-archiver
-Requires:         plexus-container-default
-Requires:         plexus-utils
-Requires:         plexus-velocity
-Requires:         velocity
+Requires:       apache-commons-codec
+Requires:       jakarta-commons-httpclient
+Requires:       maven2-common-poms
+Requires:       maven-wagon
+Requires:       plexus-appserver
+Requires:       plexus-archiver
+Requires:       plexus-container-default
+Requires:       plexus-utils
+Requires:       plexus-velocity
+Requires:       plexus-xmlrpc
+Requires:       velocity
+Requires:       xmlrpc
 
 Requires(post):    jpackage-utils >= 0:1.7.2
 Requires(postun):  jpackage-utils >= 0:1.7.2
+
 
 %description
 The Plexus project seeks to create end-to-end developer tools for
@@ -114,121 +96,67 @@ is like a J2EE application server, without all the baggage.
 %package javadoc
 Summary:        Javadoc for %{name}
 Group:          Development/Java
-Requires(post):   /bin/rm,/bin/ln
-Requires(postun): /bin/rm
+Requires:       jpackage-utils
 
 %description javadoc
 Javadoc for %{name}.
 
 %prep
 %setup -q -n %{name}
-cp %{SOURCE1} build.xml
-cp %{SOURCE3} settings.xml
 
-%patch0 -b .sav
+%patch0 -p1 -b .sav
 
 %build
-%if %{with_maven}
-sed -i -e "s|<url>__JPP_URL_PLACEHOLDER__</url>|<url>file://`pwd`/.m2/repository</url>|g" settings.xml
-sed -i -e "s|<url>__JAVADIR_PLACEHOLDER__</url>|<url>file://`pwd`/external_repo</url>|g" settings.xml
-sed -i -e "s|<url>__MAVENREPO_DIR_PLACEHOLDER__</url>|<url>file://`pwd`/.m2/repository</url>|g" settings.xml
-sed -i -e "s|<url>__MAVENDIR_PLUGIN_PLACEHOLDER__</url>|<url>file:///usr/share/maven2/plugins</url>|g" settings.xml
-sed -i -e "s|<url>__ECLIPSEDIR_PLUGIN_PLACEHOLDER__</url>|<url>file:///usr/share/eclipse/plugins</url>|g" settings.xml
 
 export MAVEN_REPO_LOCAL=$(pwd)/.m2/repository
 mkdir -p $MAVEN_REPO_LOCAL
 
-mkdir external_repo
-ln -s %{_javadir} external_repo/JPP
-
-mvn-jpp \
-        -e \
-        -s $(pwd)/settings.xml \
+# FIXME: Ignoring text failures for now
+# this is due to fact that test ignore artifact in local repo for some reason
+mvn-jpp -e \
         -Dmaven.repo.local=$MAVEN_REPO_LOCAL \
-        -Dmaven2.jpp.depmap.file=%{SOURCE4} \
-        -Dmaven2.jpp.mode=true \
+        -Dmaven.test.skip=true \
         install javadoc:javadoc
-%else
-
-mkdir -p target/lib
-build-jar-repository -s -p target/lib \
-classworlds \
-commons-collections \
-maven2/artifact \
-maven2/artifact-manager \
-maven2/model \
-maven2/profile \
-maven2/project \
-maven2/repository-metadata \
-maven-wagon/provider-api \
-plexus/appserver \
-plexus/archiver \
-plexus/container-default \
-plexus/utils \
-plexus/velocity \
-velocity \
-
-%{ant} jar javadoc
-
-%endif
-
 
 %install
-rm -rf $RPM_BUILD_ROOT
 # jars
 install -d -m 755 $RPM_BUILD_ROOT%{_javadir}/plexus
 install -pm 644 target/*.jar \
-         $RPM_BUILD_ROOT%{_javadir}/%{parent}/%{subname}-%{version}.jar
-%add_to_maven_depmap org.codehaus.plexus %{name} 1.0-alpha-9 JPP/%{parent} %{subname}
-
-(cd $RPM_BUILD_ROOT%{_javadir}/%{parent} && for jar in *-%{version}*; do ln -sf ${jar} `echo $jar| sed  "s|-%{version}||g"`; done)
+      $RPM_BUILD_ROOT%{_javadir}/%{parent}/%{subname}.jar
+%add_to_maven_depmap org.codehaus.plexus %{name} %{version} JPP/%{parent} %{subname}
+%add_to_maven_depmap plexus %{name} %{version} JPP/%{parent} %{subname}
 
 # pom
-%if %{with_maven}
-install -d -m 755 $RPM_BUILD_ROOT%{_datadir}/maven2/poms
-install -pm 644 pom.xml $RPM_BUILD_ROOT%{_datadir}/maven2/poms/JPP.%{parent}-%{subname}.pom
-%endif
+install -d -m 755 $RPM_BUILD_ROOT%{_mavenpomdir}
+install -pm 644 pom.xml \
+  $RPM_BUILD_ROOT%{_mavenpomdir}/JPP.%{parent}-%{subname}.pom
 
 # javadoc
-install -d -m 755 $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
+install -d -m 755 $RPM_BUILD_ROOT%{_javadocdir}/%{name}
 
-cp -pr target/site/apidocs/* \
-        $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}/
+cp -pr target/site/apidocs/* $RPM_BUILD_ROOT%{_javadocdir}/%{name}
 
-ln -s %{name}-%{version} $RPM_BUILD_ROOT%{_javadocdir}/%{name}
-
-%if %{gcj_support}
-%{_bindir}/aot-compile-rpm
-%endif
-
-%clean
-rm -rf $RPM_BUILD_ROOT
 
 %post
 %update_maven_depmap
-%if %{gcj_support}
-%{update_gcjdb}
-%endif
 
 %postun
 %update_maven_depmap
-%if %{gcj_support}
-%{clean_gcjdb}
-%endif
+
+%pre javadoc
+# workaround for rpm bug, can be removed in F-17
+[ $1 -gt 1 ] && [ -L %{_javadocdir}/%{name} ] && \
+rm -rf $(readlink -f %{_javadocdir}/%{name}) %{_javadocdir}/%{name} || :
+
 
 %files
 %defattr(-,root,root,-)
-%{_javadir}/%{parent}/*
-%if %{with_maven}
-%{_datadir}/maven2/poms/*
-%endif
-%{_mavendepmapfragdir}
-%if %{gcj_support}
-%dir %attr(-,root,root) %{_libdir}/gcj/%{name}
-%attr(-,root,root) %{_libdir}/gcj/%{name}/%{subname}*-%{version}.jar.*
-%endif
+%{_javadir}/plexus
+%{_mavenpomdir}/*
+%{_mavendepmapfragdir}/*
 
 %files javadoc
 %defattr(-,root,root,-)
-%doc %{_javadocdir}/%{name}-%{version}
-%doc %{_javadocdir}/%{name}
+%doc %{_javadocdir}/*
+
+
