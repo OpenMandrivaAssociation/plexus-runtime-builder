@@ -1,0 +1,86 @@
+From cbf061b25b654e4759ed1876c4f793e34e207a67 Mon Sep 17 00:00:00 2001
+From: Stanislav Ochotnicky <sochotnicky@redhat.com>
+Date: Fri, 17 Dec 2010 14:47:39 +0100
+Subject: [PATCH] Fix ArtifactResolutionException
+
+---
+ .../codehaus/plexus/builder/AbstractBuilder.java   |   24 ++++++++++++++-----
+ .../builder/runtime/PlexusRuntimeBuilderTest.java  |   10 +++++++-
+ 2 files changed, 26 insertions(+), 8 deletions(-)
+
+diff --git a/src/main/java/org/codehaus/plexus/builder/AbstractBuilder.java b/src/main/java/org/codehaus/plexus/builder/AbstractBuilder.java
+index 71bda68..2404580 100644
+--- a/src/main/java/org/codehaus/plexus/builder/AbstractBuilder.java
++++ b/src/main/java/org/codehaus/plexus/builder/AbstractBuilder.java
+@@ -248,12 +248,18 @@ public abstract class AbstractBuilder
+ 
+         if ( resolveTransitively )
+         {
+-            result = artifactResolver.resolveTransitively( sourceArtifacts,
+-                                                           originatingArtifact,
+-                                                           localRepository,
+-                                                           remoteRepositories,
+-                                                           metadata,
+-                                                           artifactFilter );
++
++            try {
++                result = artifactResolver.resolveTransitively( sourceArtifacts,
++                                                               originatingArtifact,
++                                                               localRepository,
++                                                               remoteRepositories,
++                                                               metadata,
++                                                               artifactFilter );
++            } catch (org.apache.maven.artifact.resolver.ArtifactNotFoundException e) {
++                throw new ArtifactResolutionException(e.getOriginalMessage(), e.getGroupId(), e.getArtifactId(), e.getVersion(), e.getType(), e.getClassifier(), e);
++            }
++
+             // TODO: Assert that there wasn't any conflicts.
+ 
+             resolvedArtifacts = result.getArtifacts();
+@@ -266,7 +272,11 @@ public abstract class AbstractBuilder
+             {
+                 Artifact artifact = (Artifact) it.next();
+ 
+-                artifactResolver.resolve( artifact, remoteRepositories, localRepository );
++                try {
++                    artifactResolver.resolve( artifact, remoteRepositories, localRepository );
++                } catch (org.apache.maven.artifact.resolver.ArtifactNotFoundException e) {
++                    throw new ArtifactResolutionException(e.getOriginalMessage(), e.getGroupId(), e.getArtifactId(), e.getVersion(), e.getType(), e.getClassifier(), e);
++                }
+ 
+                 resolvedArtifacts.add( artifact );
+             }
+diff --git a/src/test/java/org/codehaus/plexus/builder/runtime/PlexusRuntimeBuilderTest.java b/src/test/java/org/codehaus/plexus/builder/runtime/PlexusRuntimeBuilderTest.java
+index cd24419..d2c75d5 100644
+--- a/src/test/java/org/codehaus/plexus/builder/runtime/PlexusRuntimeBuilderTest.java
++++ b/src/test/java/org/codehaus/plexus/builder/runtime/PlexusRuntimeBuilderTest.java
+@@ -28,6 +28,7 @@ import org.apache.maven.artifact.Artifact;
+ import org.apache.maven.artifact.factory.ArtifactFactory;
+ import org.apache.maven.artifact.repository.ArtifactRepository;
+ import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
++import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
+ import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
+ import org.codehaus.plexus.PlexusTestCase;
+ import org.codehaus.plexus.util.FileUtils;
+@@ -78,10 +79,17 @@ public class PlexusRuntimeBuilderTest
+ 
+         ArtifactRepositoryLayout repositoryLayout = (ArtifactRepositoryLayout) lookup( ArtifactRepositoryLayout.ROLE, "legacy" );
+ 
++		String updatePolicyFlag = ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS;
++        String checksumPolicyFlag = ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN;
++        ArtifactRepositoryPolicy snapshotsPolicy = new ArtifactRepositoryPolicy( true, updatePolicyFlag, checksumPolicyFlag );
++        ArtifactRepositoryPolicy releasesPolicy = new ArtifactRepositoryPolicy( true, updatePolicyFlag, checksumPolicyFlag );
++
+         ArtifactRepository localRepository =
+             artifactRepositoryFactory.createArtifactRepository( "local",
+                                                                 "file://" + getTestFile( "src/test/repository" ).getAbsolutePath(),
+-                                                                repositoryLayout );
++                                                                repositoryLayout,
++																snapshotsPolicy,
++																releasesPolicy );
+ 
+         Set projectArtifacts = new HashSet();
+ 
+-- 
+1.7.3.3
+
