@@ -37,7 +37,7 @@ Release:        0.6.a9
 Summary:        Plexus Component Descriptor Creator
 License:        MIT
 Group:          Development/Java
-URL:            http://plexus.codehaus.org/
+URL:            https://plexus.codehaus.org/
 # svn export svn://svn.plexus.codehaus.org/plexus/tags/plexus-runtime-builder-1.0-alpha-9 plexus-runtime-builder/
 # tar czf plexus-runtime-builder-1.0-alpha-9.tar.gz plexus-runtime-builder/
 Source0:        %{name}-src.tar.gz
